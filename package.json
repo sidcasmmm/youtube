@@ -1,0 +1,17 @@
+{
+  "name": "youtube-shorts",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Path A AI Shorts pipeline — topic/script → 9:16 MP4 (M1 skeleton)",
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "generate": "npm run generate -w @shorts/pipeline --",
+    "build": "npm run build -w @shorts/prompts && npm run typecheck",
+    "typecheck": "npm run typecheck -w @shorts/prompts && npm run typecheck -w @shorts/compose && npm run typecheck -w @shorts/pipeline"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

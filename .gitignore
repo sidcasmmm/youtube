@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.out/
+output/
+*.mp4
+*.mp3
+*.wav
+.env
+.env.local
+.DS_Store
+*.log
+.turbo/
+coverage/
+.remotion/

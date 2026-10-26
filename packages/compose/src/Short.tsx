@@ -2,26 +2,31 @@ import React from "react";
 import {
   AbsoluteFill,
   Audio,
+  Img,
   Sequence,
   interpolate,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
-import type { ShortCompositionProps } from "./types";
+import {
+  CAPTION_PRESETS,
+  captionFontFamily,
+  displayFontFamily,
+} from "./fonts";
+import type { CaptionStyleId, ShortCompositionProps } from "./types";
 
-function resolveAudioSrc(audioFile: string): string {
-  if (!audioFile) return "";
+function resolveStaticSrc(file: string): string {
+  if (!file) return "";
   if (
-    audioFile.startsWith("http://") ||
-    audioFile.startsWith("https://") ||
-    audioFile.startsWith("data:")
+    file.startsWith("http://") ||
+    file.startsWith("https://") ||
+    file.startsWith("data:")
   ) {
-    return audioFile;
+    return file;
   }
-  // Basename relative to Remotion publicDir (set during render)
-  const base = audioFile.split("/").pop() ?? audioFile;
-  return staticFile(base);
+  // Path relative to Remotion publicDir (e.g. voiceover.mp3 or assets/scene-00.jpg)
+  return staticFile(file.replace(/^\/+/, ""));
 }
 
 const PLACEHOLDER_DEFAULT: ShortCompositionProps = {
@@ -33,79 +38,124 @@ const PLACEHOLDER_DEFAULT: ShortCompositionProps = {
       onScreenText: "Generate a Short",
       startFrame: 0,
       endFrame: 90,
-      background: "linear-gradient(160deg, #0f766e 0%, #134e4a 55%, #042f2e 100%)",
+      background: "linear-gradient(160deg, #0a1628 0%, #0f2a1f 55%, #041018 100%)",
     },
   ],
   captions: [],
   durationInFrames: 90,
+  captionStyle: "explainer",
+};
+
+const KenBurnsMedia: React.FC<{
+  src: string;
+  background: string;
+}> = ({ src, background }) => {
+  const frame = useCurrentFrame();
+  const { durationInFrames } = useVideoConfig();
+  const scale = interpolate(frame, [0, Math.max(1, durationInFrames)], [1.05, 1.18], {
+    extrapolateRight: "clamp",
+  });
+  const shiftY = interpolate(frame, [0, Math.max(1, durationInFrames)], [0, -36], {
+    extrapolateRight: "clamp",
+  });
+
+  return (
+    <AbsoluteFill style={{ background, overflow: "hidden" }}>
+      {src ? (
+        <Img
+          src={src}
+          style={{
+            width: "100%",
+            height: "100%",
+            objectFit: "cover",
+            transform: `scale(${scale}) translateY(${shiftY}px)`,
+          }}
+        />
+      ) : null}
+      <AbsoluteFill
+        style={{
+          background:
+            "linear-gradient(180deg, rgba(0,0,0,0.35) 0%, rgba(0,0,0,0.15) 35%, rgba(0,0,0,0.55) 100%)",
+        }}
+      />
+    </AbsoluteFill>
+  );
 };
 
 const SceneCard: React.FC<{
   text: string;
   background: string;
+  mediaFile?: string;
   title?: string;
-}> = ({ text, background, title }) => {
+  styleId: CaptionStyleId;
+}> = ({ text, background, mediaFile, title, styleId }) => {
   const frame = useCurrentFrame();
+  const preset = CAPTION_PRESETS[styleId];
   const opacity = interpolate(frame, [0, 8], [0, 1], {
     extrapolateRight: "clamp",
   });
-  const scale = interpolate(frame, [0, 12], [0.94, 1], {
+  const scale = interpolate(frame, [0, 12], [0.96, 1], {
     extrapolateRight: "clamp",
   });
+  const mediaSrc = mediaFile ? resolveStaticSrc(mediaFile) : "";
 
   return (
-    <AbsoluteFill
-      style={{
-        background,
-        justifyContent: "center",
-        alignItems: "center",
-        padding: "120px 80px",
-      }}
-    >
-      <div
+    <AbsoluteFill>
+      <KenBurnsMedia src={mediaSrc} background={background} />
+      <AbsoluteFill
         style={{
-          opacity,
-          transform: `scale(${scale})`,
-          textAlign: "center",
-          width: "100%",
+          justifyContent: "center",
+          alignItems: "center",
+          padding: "140px 72px",
         }}
       >
-        {title ? (
-          <div
-            style={{
-              fontFamily: "Georgia, 'Times New Roman', serif",
-              fontSize: 36,
-              letterSpacing: 4,
-              textTransform: "uppercase",
-              color: "rgba(255,255,255,0.55)",
-              marginBottom: 48,
-            }}
-          >
-            {title}
-          </div>
-        ) : null}
         <div
           style={{
-            fontFamily:
-              "ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, sans-serif",
-            fontSize: 72,
-            fontWeight: 800,
-            lineHeight: 1.15,
-            color: "#f8fafc",
-            textShadow: "0 4px 24px rgba(0,0,0,0.45)",
+            opacity,
+            transform: `scale(${scale})`,
+            textAlign: "center",
+            width: "100%",
           }}
         >
-          {text}
+          {title ? (
+            <div
+              style={{
+                fontFamily: displayFontFamily,
+                fontSize: 28,
+                fontWeight: 600,
+                letterSpacing: 3,
+                textTransform: "uppercase",
+                color: `rgba(255,255,255,${preset.titleOpacity})`,
+                marginBottom: 36,
+              }}
+            >
+              {title}
+            </div>
+          ) : null}
+          <div
+            style={{
+              fontFamily: displayFontFamily,
+              fontSize: preset.sceneFontSize,
+              fontWeight: 700,
+              lineHeight: 1.12,
+              color: "#f8fafc",
+              textShadow: "0 3px 18px rgba(0,0,0,0.65)",
+            }}
+          >
+            {text}
+          </div>
         </div>
-      </div>
+      </AbsoluteFill>
     </AbsoluteFill>
   );
 };
 
 const CaptionOverlay: React.FC<{
   captions: ShortCompositionProps["captions"];
-}> = ({ captions }) => {
+  styleId: CaptionStyleId;
+}> = ({ captions, styleId }) => {
   const frame = useCurrentFrame();
+  const preset = CAPTION_PRESETS[styleId];
   const active = captions.find(
     (c) => frame >= c.startFrame && frame < c.endFrame,
   );
@@ -116,24 +166,23 @@ const CaptionOverlay: React.FC<{
       style={{
         justifyContent: "flex-end",
         alignItems: "center",
-        paddingBottom: 220,
-        paddingLeft: 64,
-        paddingRight: 64,
+        paddingBottom: 200,
+        paddingLeft: 56,
+        paddingRight: 56,
       }}
     >
       <div
         style={{
-          fontFamily:
-            "ui-rounded, 'SF Pro Rounded', 'Segoe UI', system-ui, sans-serif",
-          fontSize: 52,
-          fontWeight: 700,
+          fontFamily: captionFontFamily,
+          fontSize: preset.captionFontSize,
+          fontWeight: 600,
           lineHeight: 1.25,
           color: "#ffffff",
-          backgroundColor: "rgba(0,0,0,0.72)",
-          padding: "18px 28px",
-          borderRadius: 16,
+          backgroundColor: preset.captionBg,
+          padding: preset.captionPadding,
+          borderRadius: preset.captionRadius,
           textAlign: "center",
-          maxWidth: "92%",
+          maxWidth: "94%",
         }}
       >
         {active.text}
@@ -148,11 +197,10 @@ export const Short: React.FC<ShortCompositionProps> = (props) => {
     ...props,
     scenes: props.scenes?.length ? props.scenes : PLACEHOLDER_DEFAULT.scenes,
   };
-  const { fps } = useVideoConfig();
-  void fps;
+  const styleId: CaptionStyleId = input.captionStyle ?? "explainer";
 
   return (
-    <AbsoluteFill style={{ backgroundColor: "#042f2e" }}>
+    <AbsoluteFill style={{ backgroundColor: "#041018" }}>
       {input.scenes.map((scene, index) => (
         <Sequence
           key={scene.id}
@@ -162,12 +210,16 @@ export const Short: React.FC<ShortCompositionProps> = (props) => {
           <SceneCard
             text={scene.onScreenText}
             background={scene.background}
+            mediaFile={scene.mediaFile}
             title={index === 0 ? input.title : undefined}
+            styleId={styleId}
           />
         </Sequence>
       ))}
-      <CaptionOverlay captions={input.captions} />
-      {input.audioFile ? <Audio src={resolveAudioSrc(input.audioFile)} /> : null}
+      <CaptionOverlay captions={input.captions} styleId={styleId} />
+      {input.audioFile ? (
+        <Audio src={resolveStaticSrc(input.audioFile)} />
+      ) : null}
     </AbsoluteFill>
   );
 };

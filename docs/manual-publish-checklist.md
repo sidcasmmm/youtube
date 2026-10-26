@@ -27,5 +27,6 @@ After `npm run generate` finishes, use `output/short-*/short.mp4`.
 ## Notes
 
 - Do not rip trending audio; this MVP is **VO-only**.
+- If `attribution.json` lists Pexels/Pixabay credits, keep photographer credit in the description when practical.
 - Disclose AI-generated content where the platform requires it.
 - Official APIs (YouTube Data API, Meta Graph Reels) are post-M3 optional.

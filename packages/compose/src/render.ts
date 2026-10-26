@@ -31,19 +31,37 @@ export type RenderShortInput = {
   /** Absolute path to workDir for Remotion temp files */
   workDir?: string;
   /**
-   * Directory served as Remotion public/ (must contain the VO basename).
-   * Defaults to the directory of props.audioFile.
+   * Directory served as Remotion public/ (VO + assets relative paths).
+   * Defaults to the directory of props.audioFile when audioFile is absolute,
+   * otherwise the parent of the first media scene path is not inferred — pass explicitly.
    */
   publicDir?: string;
 };
 
+function toPublicRelative(file: string, publicDir: string): string {
+  if (
+    file.startsWith("http://") ||
+    file.startsWith("https://") ||
+    file.startsWith("data:")
+  ) {
+    return file;
+  }
+  const abs = path.resolve(file);
+  const root = path.resolve(publicDir);
+  if (abs.startsWith(root + path.sep) || abs === root) {
+    return path.relative(root, abs).split(path.sep).join("/");
+  }
+  // Already a public-relative path (e.g. voiceover.mp3 or assets/foo.jpg)
+  return file.split(path.sep).join("/");
+}
+
 export async function renderShort(input: RenderShortInput): Promise<string> {
   const publicDir =
-    input.publicDir ?? path.dirname(path.resolve(input.props.audioFile));
-  const audioBase = path.basename(input.props.audioFile);
+    input.publicDir ??
+    (path.isAbsolute(input.props.audioFile)
+      ? path.dirname(path.resolve(input.props.audioFile))
+      : path.resolve(process.cwd()));
 
-  // Bundle per render so runtime VO in publicDir is included (M1: short clips).
-  // Disable webpack cache so publicDir assets are always copied into the serve folder.
   const serveUrl = await bundle({
     entryPoint,
     publicDir,
@@ -54,7 +72,13 @@ export async function renderShort(input: RenderShortInput): Promise<string> {
 
   const inputProps: ShortCompositionProps = {
     ...input.props,
-    audioFile: audioBase,
+    audioFile: toPublicRelative(input.props.audioFile, publicDir),
+    scenes: input.props.scenes.map((scene) => ({
+      ...scene,
+      mediaFile: scene.mediaFile
+        ? toPublicRelative(scene.mediaFile, publicDir)
+        : scene.mediaFile,
+    })),
   };
 
   const composition = await selectComposition({

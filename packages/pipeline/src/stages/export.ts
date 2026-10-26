@@ -9,11 +9,13 @@ export async function exportShortMp4(opts: {
   props: ShortCompositionProps;
   outputPath: string;
   workDir?: string;
+  publicDir?: string;
 }): Promise<string> {
   await renderShort({
     props: opts.props,
     outputPath: opts.outputPath,
     workDir: opts.workDir,
+    publicDir: opts.publicDir,
   });
   return opts.outputPath;
 }

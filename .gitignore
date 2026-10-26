@@ -1,0 +1,15 @@
+node_modules/
+dist/
+.out/
+output/**
+!output/.gitkeep
+*.mp4
+*.mp3
+*.wav
+.env
+.env.local
+.DS_Store
+*.log
+.turbo/
+coverage/
+.remotion/

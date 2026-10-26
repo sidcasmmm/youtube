@@ -4,7 +4,7 @@ Greenfield MVP: **topic or script → vertical AI Short (9:16 MP4)** for manual 
 
 **Niche:** “Things explained” — Space, Biology, Earth curiosity explainers.
 
-**M2 status:** Stock/mock B-roll per scene, VO-locked cuts, caption style preset, VO-only audio. CLI can emit **3 niche sample Shorts**.
+**M3 status:** Operator UI (input → progress → download MP4 → copy caption/hashtags) + manual publish checklist. One command: `npm run ui`.
 
 ## Locked stack
 
@@ -14,12 +14,14 @@ Greenfield MVP: **topic or script → vertical AI Short (9:16 MP4)** for manual 
 | TTS | OpenAI TTS |
 | LLM | OpenAI |
 | Stock | Pexels (preferred) → Pixabay → mock stills |
-| Music | VO-only (no paid bed dependency in M2) |
-| Platforms | Manual upload (later) |
+| Music | VO-only (no paid bed dependency) |
+| Platforms | Manual upload + in-UI checklist |
+| Operator UX | Local web UI (`apps/web`) |
 
 ## Repo layout
 
 ```
+apps/web/            # Operator UI + generate API (SSE progress)
 packages/prompts/    # Short script Zod schema + LLM prompts
 packages/pipeline/   # CLI + stages (script → TTS → align → assets → timeline → export)
 packages/compose/    # Remotion Short composition (1080×1920)
@@ -27,84 +29,93 @@ output/              # Generated runs (gitignored)
 docs/                # Manual publish checklist
 ```
 
-UI is deferred to M3 — use the CLI for now.
-
 ## Prerequisites
 
 - Node.js 20+
-- FFmpeg + ffprobe on `PATH` (duration probe / mock VO / mock B-roll stills / validation)
-- Chromium deps for Remotion render (installed with `@remotion/renderer`)
+- FFmpeg + ffprobe on `PATH`
+- Chromium deps for Remotion render (via `@remotion/renderer`)
 
 ## Setup
 
 ```bash
 npm install
 cp .env.example .env
-# Edit .env — see keys below
+# Edit .env — never commit real keys
 ```
-
-**Never commit `.env` or real keys.**
 
 ### Environment variables
 
 | Variable | Required | Purpose |
 |----------|----------|---------|
 | `OPENAI_API_KEY` | For live generate | LLM script, TTS, optional Whisper word alignment |
-| `PEXELS_API_KEY` | Recommended for M2 | Portrait stock photos per scene ([pexels.com/api](https://www.pexels.com/api/)) |
-| `PIXABAY_API_KEY` | Optional fallback | Stock photos if Pexels misses ([pixabay.com/api/docs](https://pixabay.com/api/docs/)) |
+| `PEXELS_API_KEY` | Recommended | Portrait stock photos per scene |
+| `PIXABAY_API_KEY` | Optional fallback | Stock if Pexels misses |
 | `OPENAI_LLM_MODEL` | No | Default `gpt-4.1-mini` |
 | `OPENAI_TTS_MODEL` | No | Default `gpt-4o-mini-tts` |
 | `OPENAI_TTS_VOICE` | No | Default `alloy` |
+| `PORT` | No | UI server port (default `4173`) |
 
-Without stock keys, the pipeline still runs using **mock B-roll stills** (ffmpeg gradients) and records that in `attribution.json`.
+Without `OPENAI_API_KEY`, the UI and CLI fall back to **mock mode** (niche mock script + sine VO + placeholder B-roll).
 
-## Generate a Short
+---
 
-From the repo root:
+## Operator UI (recommended for non-engineers)
+
+One command from the repo root:
 
 ```bash
-# From a topic (OpenAI script + TTS; stock if keys set)
+npm run ui
+```
+
+Then open **http://localhost:4173**
+
+1. Enter a **topic** (or switch to **Script** and paste a draft).
+2. Optionally enable **Mock mode** (auto-on when OpenAI key is missing).
+3. Click **Generate Short** — watch the progress steps.
+4. **Download MP4**, **Copy caption**, **Copy hashtags**.
+5. Follow the on-page checklist for YouTube / Instagram / Facebook.
+
+Regenerate: change the topic and click **Generate Short** again (or use the CLI below).
+
+Alias: `npm start` → same as `npm run ui`.
+
+---
+
+## CLI
+
+```bash
+# From a topic (live keys)
 npm run generate -- --topic "Why is the sky blue?"
 
 # From a draft script
 npm run generate -- --script "Stop scrolling. Here's why space is silent..."
 
-# Offline skeleton (no API keys): mock niche script + sine VO + mock B-roll
+# Offline / no keys
 npm run generate -- --mock
 
-# Caption style preset: explainer (default) | minimal
+# Caption style: explainer (default) | minimal
 npm run generate -- --mock --caption-style minimal
-```
 
-### Three niche samples (M2 exit)
-
-```bash
-# Preferred when keys are set — real TTS + Pexels/Pixabay B-roll
+# Three niche samples (Space / Biology / Earth)
 npm run generate -- --samples
-
-# Guaranteed offline / no keys — mock VO + placeholder B-roll for all 3
 npm run generate -- --samples --mock
 ```
 
-Topics (Space / Biology / Earth):
-
-1. Why is space completely silent?
-2. Why do we yawn when someone else yawns?
-3. Why is the sky blue?
-
 Each run writes under `output/short-<id>/`:
 
-- `script.json` — structured beats + stock queries
+- `script.json` — structured beats + hashtags
 - `voiceover.mp3` — TTS (or mock audio)
-- `assets/` — B-roll stills (stock or mock)
-- `attribution.json` — stock credit lines (keep for publish)
-- `timeline.json` — VO-locked scene + caption frame map
+- `assets/` — B-roll stills
+- `attribution.json` — stock credits
+- `timeline.json` — scene + caption map
 - `short.mp4` — **1080×1920 H.264 + AAC** with burned-in captions
 
 ## Manual publish
 
-See [docs/manual-publish-checklist.md](docs/manual-publish-checklist.md). Credit stock photographers when the platform allows.
+See [docs/manual-publish-checklist.md](docs/manual-publish-checklist.md) (also embedded in the UI).
 
-## M3+ (not in this PR)
+## Security
 
-Thin web UI, louder loudness pass / optional cleared music bed, publish checklist UX.
+- Secrets live only in `.env` (gitignored).
+- `.env.example` has placeholders only.
+- The UI `/api/env-status` returns **booleans** (key present or not) — never secret values.

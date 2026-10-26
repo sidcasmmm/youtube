@@ -2,6 +2,8 @@ export {
   generateShort,
   type GenerateOptions,
   type GenerateResult,
+  type GenerateProgress,
+  type GenerateProgressStep,
 } from "./generate.js";
 export { buildScript, SAMPLE_TOPICS, MOCK_SCRIPT } from "./stages/script.js";
 export {

@@ -20,6 +20,7 @@ export const RemotionRoot: React.FC = () => {
             scenes: [],
             captions: [],
             durationInFrames: 900,
+            captionStyle: "explainer",
           } satisfies ShortCompositionProps
         }
         calculateMetadata={({ props }) => {

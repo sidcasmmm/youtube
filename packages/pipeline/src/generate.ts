@@ -13,6 +13,23 @@ import {
   synthesizeSpeech,
 } from "./stages/tts.js";
 
+export type GenerateProgressStep =
+  | "script"
+  | "tts"
+  | "align"
+  | "assets"
+  | "timeline"
+  | "render"
+  | "validate"
+  | "done";
+
+export type GenerateProgress = {
+  step: GenerateProgressStep;
+  index: number;
+  total: number;
+  message: string;
+};
+
 export type GenerateOptions = {
   topic?: string;
   script?: string;
@@ -24,6 +41,8 @@ export type GenerateOptions = {
   runId?: string;
   apiKey?: string;
   captionStyle?: "explainer" | "minimal";
+  /** Optional progress hook for UI / SSE */
+  onProgress?: (progress: GenerateProgress) => void;
 };
 
 export type GenerateResult = {
@@ -32,8 +51,21 @@ export type GenerateResult = {
   audioPath: string;
   mp4Path: string;
   attributionPath: string;
+  script: ShortScript;
   probe: Awaited<ReturnType<typeof validateVerticalMp4>>;
 };
+
+const PROGRESS_TOTAL = 6;
+
+function report(
+  onProgress: GenerateOptions["onProgress"],
+  step: GenerateProgressStep,
+  index: number,
+  message: string,
+): void {
+  console.log(message);
+  onProgress?.({ step, index, total: PROGRESS_TOTAL, message });
+}
 
 export async function generateShort(
   opts: GenerateOptions,
@@ -42,8 +74,9 @@ export async function generateShort(
   const root = path.resolve(opts.outDir ?? path.join(process.cwd(), "output"));
   const outDir = path.join(root, `short-${stamp}`);
   await mkdir(outDir, { recursive: true });
+  const onProgress = opts.onProgress;
 
-  console.log("[1/6] Building structured beats…");
+  report(onProgress, "script", 1, "[1/6] Building structured beats…");
   const shortScript = await buildScript({
     topic: opts.topic,
     script: opts.script,
@@ -54,7 +87,7 @@ export async function generateShort(
   const scriptPath = path.join(outDir, "script.json");
   await writeFile(scriptPath, JSON.stringify(shortScript, null, 2));
 
-  console.log("[2/6] Synthesizing TTS…");
+  report(onProgress, "tts", 2, "[2/6] Synthesizing TTS…");
   const narration = scriptToNarration(shortScript);
   const { audioPath } = await synthesizeSpeech({
     text: narration,
@@ -63,7 +96,7 @@ export async function generateShort(
     apiKey: opts.apiKey,
   });
 
-  console.log("[3/6] Aligning cuts to VO…");
+  report(onProgress, "align", 3, "[3/6] Aligning cuts to VO…");
   const durationSeconds = await probeDurationSeconds(audioPath);
   const words = await transcribeWordTimings({
     audioPath,
@@ -76,7 +109,7 @@ export async function generateShort(
     words,
   });
 
-  console.log("[4/6] Fetching stock / mock B-roll…");
+  report(onProgress, "assets", 4, "[4/6] Fetching stock / mock B-roll…");
   const assets = await fetchSceneAssets({
     script: shortScript,
     outDir,
@@ -89,7 +122,7 @@ export async function generateShort(
     fileName: path.posix.join("assets", a.fileName),
   }));
 
-  console.log("[5/6] Planning scenes + captions…");
+  report(onProgress, "timeline", 5, "[5/6] Planning scenes + captions…");
   const timeline = planTimeline({
     script: shortScript,
     durationSeconds,
@@ -122,7 +155,12 @@ export async function generateShort(
     ),
   );
 
-  console.log("[6/6] Rendering Remotion → 1080×1920 H.264…");
+  report(
+    onProgress,
+    "render",
+    6,
+    "[6/6] Rendering Remotion → 1080×1920 H.264…",
+  );
   const mp4Path = path.join(outDir, "short.mp4");
   await exportShortMp4({
     props,
@@ -131,11 +169,10 @@ export async function generateShort(
     publicDir: outDir,
   });
 
-  console.log("Validating export…");
+  report(onProgress, "validate", 6, "Validating export…");
   const probe = await validateVerticalMp4(mp4Path);
-  console.log(
-    `Done: ${mp4Path} (${probe.width}×${probe.height} ${probe.videoCodec}, ${probe.duration.toFixed(1)}s)`,
-  );
+  const doneMsg = `Done: ${mp4Path} (${probe.width}×${probe.height} ${probe.videoCodec}, ${probe.duration.toFixed(1)}s)`;
+  report(onProgress, "done", 6, doneMsg);
 
   return {
     outDir,
@@ -143,6 +180,7 @@ export async function generateShort(
     audioPath,
     mp4Path,
     attributionPath: assets.attributionPath,
+    script: shortScript,
     probe,
   };
 }

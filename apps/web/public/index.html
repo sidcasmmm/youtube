@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Things explained — Shorts studio</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,700&family=Source+Sans+3:wght@400;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <div class="atmosphere" aria-hidden="true"></div>
+    <header class="top">
+      <div class="brand">
+        <p class="brand-mark">Things explained</p>
+        <p class="brand-sub">Space · Biology · Earth — Shorts studio</p>
+      </div>
+      <div id="env-pill" class="env-pill" title="API key status from .env">
+        Checking keys…
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="panel create" aria-labelledby="create-heading">
+        <h1 id="create-heading">Make a Short</h1>
+        <p class="lede">
+          Paste a topic or script, generate a vertical MP4, then post with the
+          checklist. Aim: under 10 minutes.
+        </p>
+
+        <div class="mode-tabs" role="tablist">
+          <button type="button" class="tab active" data-mode="topic" role="tab">
+            Topic
+          </button>
+          <button type="button" class="tab" data-mode="script" role="tab">
+            Script
+          </button>
+        </div>
+
+        <label class="field" id="topic-field">
+          <span>Topic</span>
+          <input
+            id="topic"
+            type="text"
+            maxlength="200"
+            placeholder="Why is space completely silent?"
+            value="Why is the sky blue?"
+          />
+        </label>
+
+        <label class="field hidden" id="script-field">
+          <span>Script draft</span>
+          <textarea
+            id="script"
+            rows="6"
+            maxlength="4000"
+            placeholder="Write or paste your narration…"
+          ></textarea>
+        </label>
+
+        <div class="row">
+          <label class="field grow">
+            <span>Caption style</span>
+            <select id="caption-style">
+              <option value="explainer" selected>Explainer</option>
+              <option value="minimal">Minimal</option>
+            </select>
+          </label>
+          <label class="check">
+            <input id="mock" type="checkbox" />
+            <span>Mock mode (no API keys)</span>
+          </label>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="generate" class="primary">
+            Generate Short
+          </button>
+          <p id="busy-hint" class="hint" hidden></p>
+        </div>
+
+        <div id="progress" class="progress" hidden>
+          <div class="progress-bar" aria-hidden="true">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+          <ol id="progress-steps" class="progress-steps"></ol>
+          <p id="progress-msg" class="progress-msg"></p>
+        </div>
+      </section>
+
+      <section class="panel result" aria-labelledby="result-heading">
+        <h2 id="result-heading">Result</h2>
+        <p id="result-empty" class="muted">
+          Your MP4, caption, and hashtags will show up here.
+        </p>
+
+        <div id="result-body" class="result-body" hidden>
+          <div class="preview-wrap">
+            <video id="preview" controls playsinline></video>
+          </div>
+          <div class="result-meta">
+            <h3 id="result-title"></h3>
+            <p id="result-probe" class="muted"></p>
+            <div class="actions wrap">
+              <a id="download" class="primary" href="#">Download MP4</a>
+              <button type="button" id="copy-caption" class="secondary">
+                Copy caption
+              </button>
+              <button type="button" id="copy-hashtags" class="secondary">
+                Copy hashtags
+              </button>
+            </div>
+            <p id="copy-status" class="hint" role="status"></p>
+            <label class="field">
+              <span>Caption (title + CTA + tags)</span>
+              <textarea id="caption-box" rows="6" readonly></textarea>
+            </label>
+          </div>
+        </div>
+      </section>
+
+      <section class="panel checklist" aria-labelledby="check-heading">
+        <h2 id="check-heading">Manual publish checklist</h2>
+        <p class="lede">
+          Upload the same MP4 to YouTube Shorts, Instagram Reels, and Facebook
+          Reels. VO-only — don’t attach trending audio ripoffs.
+        </p>
+        <div class="checklist-grid">
+          <article>
+            <h3>YouTube Shorts</h3>
+            <ol>
+              <li>YouTube Studio → Create → Upload videos</li>
+              <li>Pick the downloaded vertical MP4 (≤60s)</li>
+              <li>Title = script title (keep short)</li>
+              <li>Paste caption + hashtags into Description</li>
+              <li>Add stock credits from attribution if listed</li>
+              <li>Disclose AI if required → Publish</li>
+            </ol>
+          </article>
+          <article>
+            <h3>Instagram Reels</h3>
+            <ol>
+              <li>Instagram app → Create → Reel</li>
+              <li>Upload MP4 from camera roll / Files</li>
+              <li>Cover: mid-frame with readable on-screen text</li>
+              <li>Paste caption + hashtags</li>
+              <li>Share to Reels (and Feed if you want)</li>
+            </ol>
+          </article>
+          <article>
+            <h3>Facebook Reels</h3>
+            <ol>
+              <li>Facebook app or Page → Create Reel</li>
+              <li>Upload the same MP4</li>
+              <li>Paste caption + hashtags</li>
+              <li>Post as your Page if that’s the brand surface</li>
+            </ol>
+          </article>
+        </div>
+        <p class="muted">
+          Full notes:
+          <a href="/api/checklist" target="_blank" rel="noopener"
+            >docs/manual-publish-checklist.md</a
+          >
+        </p>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>
+        One-command UI: <code>npm run ui</code> · CLI:
+        <code>npm run generate -- --topic "…"</code>
+      </p>
+    </footer>
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

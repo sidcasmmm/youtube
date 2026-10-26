@@ -15,6 +15,17 @@ Use **Copy caption** / **Copy hashtags** in the operator UI, or build from `scri
 
 ## YouTube Shorts
 
+### Option A — semi-auto (M4 spike)
+
+When `YOUTUBE_CLIENT_ID`, `YOUTUBE_CLIENT_SECRET`, and `YOUTUBE_REFRESH_TOKEN` are set:
+
+1. Complete [youtube-oauth-setup.md](./youtube-oauth-setup.md) once.
+2. UI: **Upload to YouTube** after generate (defaults to **private**), **or** CLI: `npm run upload-youtube`.
+3. Open the Studio link printed/returned → review → set Public when ready.
+4. Still disclose AI / add stock credits in Studio if needed.
+
+### Option B — manual
+
 1. Open [YouTube Studio](https://studio.youtube.com) → **Create** → **Upload videos**.
 2. Select the vertical MP4 (≤60s for Shorts treatment).
 3. **Title:** use the Short title (keep under ~100 characters).
@@ -47,6 +58,6 @@ Use **Copy caption** / **Copy hashtags** in the operator UI, or build from `scri
 - [ ] Stock attribution noted when applicable  
 - [ ] No uncleared trending music attached  
 
-## Later (not MVP)
+## Meta Reels (API later)
 
-Official APIs (YouTube Data API `videos.insert`, Meta Graph Reels) stay optional after M3. Manual upload is the supported path for this MVP.
+Instagram / Facebook Graph Reels publishing needs App Review, professional accounts, and a public video URL — see [meta-reels-api-blockers.md](./meta-reels-api-blockers.md). **Manual upload remains the supported IG/FB path for MVP.**

@@ -113,7 +113,21 @@
               <button type="button" id="copy-hashtags" class="secondary">
                 Copy hashtags
               </button>
+              <button
+                type="button"
+                id="upload-youtube"
+                class="secondary"
+                hidden
+                title="Requires YOUTUBE_* credentials in .env"
+              >
+                Upload to YouTube
+              </button>
             </div>
+            <p id="youtube-hint" class="hint muted" hidden>
+              YouTube upload needs OAuth in
+              <code>.env</code> — see docs/youtube-oauth-setup.md. IG/FB stay
+              manual (Meta App Review).
+            </p>
             <p id="copy-status" class="hint" role="status"></p>
             <label class="field">
               <span>Caption (title + CTA + tags)</span>
@@ -133,10 +147,13 @@
           <article>
             <h3>YouTube Shorts</h3>
             <ol>
-              <li>YouTube Studio → Create → Upload videos</li>
-              <li>Pick the downloaded vertical MP4 (≤60s)</li>
-              <li>Title = script title (keep short)</li>
-              <li>Paste caption + hashtags into Description</li>
+              <li>
+                Optional semi-auto: <strong>Upload to YouTube</strong> when
+                OAuth is configured (private by default)
+              </li>
+              <li>Or YouTube Studio → Create → Upload videos</li>
+              <li>Pick the vertical MP4 (≤60s)</li>
+              <li>Title = script title; paste caption + hashtags</li>
               <li>Add stock credits from attribution if listed</li>
               <li>Disclose AI if required → Publish</li>
             </ol>
@@ -166,6 +183,12 @@
           <a href="/api/checklist" target="_blank" rel="noopener"
             >docs/manual-publish-checklist.md</a
           >
+          · YouTube OAuth:
+          <a href="/docs/youtube-oauth-setup.md">docs/youtube-oauth-setup.md</a>
+          · Meta blockers:
+          <a href="/docs/meta-reels-api-blockers.md"
+            >docs/meta-reels-api-blockers.md</a
+          >
         </p>
       </section>
     </main>
@@ -173,7 +196,8 @@
     <footer class="foot">
       <p>
         One-command UI: <code>npm run ui</code> · CLI:
-        <code>npm run generate -- --topic "…"</code>
+        <code>npm run generate -- --topic "…"</code> · Upload:
+        <code>npm run upload-youtube</code>
       </p>
     </footer>
     <script src="/app.js" type="module"></script>

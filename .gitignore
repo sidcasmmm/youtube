@@ -13,3 +13,7 @@ output/**
 .turbo/
 coverage/
 .remotion/
+.youtube-tokens.json
+**/client_secret*.json
+credentials.json
+token.json

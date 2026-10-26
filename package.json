@@ -2,7 +2,7 @@
   "name": "youtube-shorts",
   "private": true,
   "version": "0.1.0",
-  "description": "Path A AI Shorts pipeline — topic/script → 9:16 MP4 (M3 operator UI)",
+  "description": "Path A AI Shorts pipeline — topic/script → 9:16 MP4 (M4 YouTube upload spike)",
   "workspaces": [
     "packages/*",
     "apps/*"
@@ -12,8 +12,10 @@
     "samples": "npm run generate -w @shorts/pipeline -- --samples",
     "ui": "npm run build -w @shorts/prompts && npm run start -w @shorts/web",
     "start": "npm run ui",
+    "youtube:auth": "npm run auth -w @shorts/youtube --",
+    "upload-youtube": "npm run upload -w @shorts/youtube --",
     "build": "npm run build -w @shorts/prompts && npm run typecheck",
-    "typecheck": "npm run typecheck -w @shorts/prompts && npm run typecheck -w @shorts/compose && npm run typecheck -w @shorts/pipeline && npm run typecheck -w @shorts/web"
+    "typecheck": "npm run build -w @shorts/prompts && npm run typecheck -w @shorts/prompts && npm run typecheck -w @shorts/compose && npm run typecheck -w @shorts/pipeline && npm run typecheck -w @shorts/youtube && npm run typecheck -w @shorts/web"
   },
   "engines": {
     "node": ">=20"

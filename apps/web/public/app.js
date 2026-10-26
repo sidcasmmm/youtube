@@ -24,7 +24,11 @@ const els = {
   copyStatus: $("#copy-status"),
   captionBox: $("#caption-box"),
   envPill: $("#env-pill"),
+  uploadYoutube: $("#upload-youtube"),
+  youtubeHint: $("#youtube-hint"),
 };
+
+let youtubeConfigured = false;
 
 const STEP_LABELS = [
   "Script beats",
@@ -57,13 +61,23 @@ async function refreshEnv() {
   try {
     const res = await fetch("/api/env-status");
     const data = await res.json();
+    youtubeConfigured = Boolean(data.youtube);
+    if (els.youtubeHint) {
+      els.youtubeHint.hidden = youtubeConfigured;
+    }
+    if (els.uploadYoutube && activeJobId && youtubeConfigured) {
+      els.uploadYoutube.hidden = false;
+    }
     if (!data.openai) {
       els.mock.checked = true;
-      els.envPill.textContent = "Mock mode — add OPENAI_API_KEY to .env for live";
+      els.envPill.textContent = youtubeConfigured
+        ? "Mock generate · YouTube upload ready"
+        : "Mock mode — add OPENAI_API_KEY to .env for live";
       els.envPill.className = "env-pill warn";
     } else {
       const stock = data.pexels || data.pixabay ? "stock on" : "mock B-roll";
-      els.envPill.textContent = `Live OpenAI · ${stock}`;
+      const yt = youtubeConfigured ? " · YT ready" : "";
+      els.envPill.textContent = `Live OpenAI · ${stock}${yt}`;
       els.envPill.className = "env-pill ok";
     }
   } catch {
@@ -123,6 +137,13 @@ async function showResult(job) {
     : "";
   els.download.href = `/api/jobs/${job.id}/download`;
   els.preview.src = `/api/jobs/${job.id}/download`;
+  if (els.uploadYoutube) {
+    els.uploadYoutube.hidden = !youtubeConfigured;
+    els.uploadYoutube.disabled = false;
+  }
+  if (els.youtubeHint) {
+    els.youtubeHint.hidden = youtubeConfigured;
+  }
   await loadCaption(job.id);
 }
 
@@ -143,6 +164,27 @@ els.copyCaption.addEventListener("click", () => {
 els.copyHashtags.addEventListener("click", () => {
   if (!captionPayload) return;
   void copyText(captionPayload.hashtagsOnly, "Hashtags");
+});
+
+els.uploadYoutube?.addEventListener("click", async () => {
+  if (!activeJobId || !youtubeConfigured) return;
+  els.uploadYoutube.disabled = true;
+  els.copyStatus.textContent = "Uploading to YouTube (private by default)…";
+  try {
+    const res = await fetch(`/api/jobs/${activeJobId}/upload-youtube`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ privacyStatus: "private" }),
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+    els.copyStatus.innerHTML = `Uploaded · <a href="${data.studioUrl}" target="_blank" rel="noopener">Studio</a> · <a href="${data.watchUrl}" target="_blank" rel="noopener">Watch</a> (${data.privacyStatus})`;
+  } catch (err) {
+    els.copyStatus.textContent =
+      err instanceof Error ? err.message : String(err);
+  } finally {
+    els.uploadYoutube.disabled = false;
+  }
 });
 
 function subscribe(jobId) {

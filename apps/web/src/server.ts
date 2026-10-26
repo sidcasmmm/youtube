@@ -5,6 +5,11 @@ import { fileURLToPath } from "node:url";
 import { config as loadEnv } from "dotenv";
 import express from "express";
 import { generateShort } from "@shorts/pipeline";
+import {
+  buildShortsDescription,
+  getYoutubeCredentialStatus,
+  uploadShortToYoutube,
+} from "@shorts/youtube";
 import { buildCaptionText, buildHashtagsOnly } from "./caption.js";
 import {
   createJob,
@@ -28,6 +33,8 @@ const PORT = Number(process.env.PORT ?? 4173);
 
 /** Only one generate at a time — Remotion + FFmpeg are heavy on a laptop. */
 let generateBusy = false;
+/** Serialize YouTube uploads so resumable streams do not overlap. */
+let youtubeUploadBusy = false;
 
 const app = express();
 app.use(express.json({ limit: "256kb" }));
@@ -39,10 +46,14 @@ app.get("/api/health", (_req, res) => {
 
 /** Booleans only — never echo secret values. */
 app.get("/api/env-status", (_req, res) => {
+  const youtube = getYoutubeCredentialStatus();
   res.json({
     openai: Boolean(process.env.OPENAI_API_KEY?.trim()),
     pexels: Boolean(process.env.PEXELS_API_KEY?.trim()),
     pixabay: Boolean(process.env.PIXABAY_API_KEY?.trim()),
+    youtube: youtube.configured,
+    youtubeClientId: youtube.clientId,
+    youtubeRefreshToken: youtube.refreshToken,
     mockRecommended: !process.env.OPENAI_API_KEY?.trim(),
   });
 });
@@ -56,6 +67,21 @@ app.get("/api/checklist", async (_req, res) => {
     res.type("text/markdown").send(md);
   } catch {
     res.status(404).json({ error: "Checklist not found" });
+  }
+});
+
+/** Serve markdown docs for in-UI links (read-only). */
+app.get("/docs/:name", async (req, res) => {
+  const name = path.basename(req.params.name);
+  if (!/^[\w.-]+\.md$/.test(name)) {
+    res.status(400).json({ error: "Invalid doc name" });
+    return;
+  }
+  try {
+    const md = await readFile(path.join(docsDir, name), "utf8");
+    res.type("text/markdown").send(md);
+  } catch {
+    res.status(404).json({ error: "Doc not found" });
   }
 });
 
@@ -144,6 +170,72 @@ app.get("/api/jobs/:id/download", async (req, res) => {
   res.download(mp4Path, `${titleSafe}.mp4`);
 });
 
+app.post("/api/jobs/:id/upload-youtube", async (req, res) => {
+  if (!getYoutubeCredentialStatus().configured) {
+    res.status(503).json({
+      error:
+        "YouTube OAuth not configured. Set YOUTUBE_CLIENT_ID, YOUTUBE_CLIENT_SECRET, YOUTUBE_REFRESH_TOKEN — see docs/youtube-oauth-setup.md",
+    });
+    return;
+  }
+  if (youtubeUploadBusy) {
+    res.status(409).json({
+      error: "A YouTube upload is already in progress. Wait, then try again.",
+    });
+    return;
+  }
+
+  const job = getJob(req.params.id);
+  if (!job?.result?.mp4Path || job.status !== "done") {
+    res.status(404).json({ error: "MP4 not ready — generate a Short first." });
+    return;
+  }
+  const mp4Path = path.resolve(job.result.mp4Path);
+  if (!mp4Path.startsWith(path.resolve(outputRoot) + path.sep)) {
+    res.status(403).json({ error: "Invalid path" });
+    return;
+  }
+
+  const body = req.body ?? {};
+  const privacyRaw =
+    typeof body.privacyStatus === "string" ? body.privacyStatus : undefined;
+  const privacyStatus =
+    privacyRaw === "public" ||
+    privacyRaw === "unlisted" ||
+    privacyRaw === "private"
+      ? privacyRaw
+      : undefined;
+
+  const title =
+    (typeof body.title === "string" && body.title.trim()) ||
+    job.shortScript?.title ||
+    "Things explained";
+  const description =
+    (typeof body.description === "string" && body.description.trim()) ||
+    buildShortsDescription({
+      cta: job.shortScript?.cta,
+      hashtags: job.shortScript?.captionHashtags,
+    });
+
+  youtubeUploadBusy = true;
+  try {
+    const result = await uploadShortToYoutube({
+      mp4Path,
+      title,
+      description,
+      tags: job.shortScript?.captionHashtags?.map((t) => t.replace(/^#/, "")),
+      privacyStatus,
+    });
+    res.json({ ok: true, ...result });
+  } catch (err) {
+    res.status(500).json({
+      error: err instanceof Error ? err.message : String(err),
+    });
+  } finally {
+    youtubeUploadBusy = false;
+  }
+});
+
 app.post("/api/generate", async (req, res) => {
   if (generateBusy) {
     res.status(409).json({
@@ -216,10 +308,11 @@ app.get("*", (_req, res) => {
 });
 
 app.listen(PORT, () => {
+  const yt = getYoutubeCredentialStatus().configured;
   console.log(`Things explained — operator UI`);
   console.log(`  Open http://localhost:${PORT}`);
   console.log(
-    `  Keys: OpenAI=${Boolean(process.env.OPENAI_API_KEY?.trim()) ? "yes" : "no (mock)"} Pexels=${Boolean(process.env.PEXELS_API_KEY?.trim()) ? "yes" : "no"}`,
+    `  Keys: OpenAI=${Boolean(process.env.OPENAI_API_KEY?.trim()) ? "yes" : "no (mock)"} Pexels=${Boolean(process.env.PEXELS_API_KEY?.trim()) ? "yes" : "no"} YouTube=${yt ? "yes" : "no"}`,
   );
   console.log(`  Output: ${outputRoot}`);
 });
